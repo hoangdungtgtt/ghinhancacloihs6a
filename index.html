@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghi nhận lỗi vi phạm học sinh</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 15px;
+            display: flex; justify-content: center; align-items: flex-start;
+        }
+        .app {
+            background: white; border-radius: 18px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+            padding: 22px 18px; max-width: 600px; width: 100%;
+            animation: slideIn 0.4s ease-out;
+        }
+        @keyframes slideIn { from {opacity:0;transform:translateY(-15px);} to {opacity:1;transform:translateY(0);} }
+        h1 { text-align: center; color: #333; font-size: 20px; margin-bottom: 4px; }
+        .subtitle { text-align: center; color: #888; font-size: 12px; margin-bottom: 18px; }
+        .section-title {
+            font-size: 13px; font-weight: 700; color: #667eea;
+            margin: 16px 0 10px 0; padding: 8px 10px;
+            background: linear-gradient(90deg, #f0f2ff, transparent);
+            border-left: 3px solid #667eea; border-radius: 6px;
+        }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-weight: 600; color: #555; margin-bottom: 5px; font-size: 12.5px; }
+
+        .search-wrap { position: relative; }
+        .search-box {
+            width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0;
+            border-radius: 10px; font-size: 14px; background: #fafafa;
+            transition: all 0.3s ease;
+        }
+        .search-box:focus {
+            outline: none; border-color: #667eea; background: white;
+            box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+        }
+        .suggestions {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            max-height: 220px; overflow-y: auto; z-index: 100;
+            display: none;
+        }
+        .suggestions.show { display: block; }
+        .suggestion-item {
+            padding: 10px 14px; font-size: 13.5px; color: #444;
+            cursor: pointer; transition: background 0.15s ease;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .suggestion-item:hover, .suggestion-item.highlight {
+            background: #eef1ff; color: #667eea; font-weight: 600;
+        }
+        .suggestion-item .badge {
+            font-size: 10px; padding: 2px 8px; border-radius: 12px;
+            background: #ff4b2b; color: white; font-weight: 700;
+        }
+        .suggestion-item .badge.hidden { display: none; }
+        .no-result { padding: 12px 14px; color: #999; font-size: 13px; text-align: center; }
+
+        .note-area {
+            display: none; margin-top: 6px;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .note-area.show { display: block; }
+        @keyframes fadeIn { from {opacity:0;transform:translateY(-6px);} to {opacity:1;transform:translateY(0);} }
+        .note-area .current-student {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; padding: 4px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: 700; margin-bottom: 6px;
+        }
+        textarea {
+            width: 100%; padding: 10px 13px; border: 2px solid #e0e0e0;
+            border-radius: 10px; font-size: 14px; transition: all 0.3s ease;
+            background: #fafafa; color: #333; font-family: inherit;
+            resize: vertical; min-height: 70px;
+        }
+        textarea:focus {
+            outline: none; border-color: #667eea; background: white;
+            box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+        }
+
+        .progress {
+            display: flex; align-items: center; gap: 8px;
+            background: #f8f9ff; border-radius: 10px; padding: 10px 12px;
+            margin: 12px 0;
+        }
+        .progress-bar {
+            flex: 1; height: 10px; background: #e0e4f5;
+            border-radius: 10px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 10px; transition: width 0.3s ease;
+        }
+        .progress-text {
+            font-size: 12px; font-weight: 700; color: #667eea;
+            white-space: nowrap;
+        }
+
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 12px;
+            font-size: 15px; font-weight: 700; cursor: pointer;
+            transition: all 0.3s ease; letter-spacing: 0.3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; margin-top: 10px;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102,126,234,0.4); }
+        .btn:disabled {
+            opacity: 0.45; cursor: not-allowed;
+            background: #b0b0b0; box-shadow: none; transform: none;
+        }
+
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+            padding: 12px 22px; border-radius: 12px; color: white;
+            font-weight: 600; font-size: 14px; z-index: 9999;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: transform 0.4s ease; max-width: 90%;
+            white-space: pre-line;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast.success { background: linear-gradient(135deg, #4CAF50, #45a049); }
+        .toast.error { background: linear-gradient(135deg, #f44336, #d32f2f); }
+        .toast.info { background: linear-gradient(135deg, #667eea, #764ba2); }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <h1>📋 GHI NHẬN LỖI VI PHẠM</h1>
+        <p class="subtitle">Nhập tên học sinh để chọn, sau đó nhập nội dung lỗi. Không bắt buộc nhập cho tất cả.</p>
+
+        <form id="violationForm">
+            <div class="section-title">👤 Tên học sinh</div>
+            <div class="form-group">
+                <div class="search-wrap">
+                    <input type="text" id="studentInput" class="search-box"
+                           placeholder="Nhập tên học sinh..." autocomplete="off">
+                    <div class="suggestions" id="suggestions"></div>
+                </div>
+            </div>
+
+            <div class="note-area" id="noteArea">
+                <div class="section-title">📝 Nội dung lỗi vi phạm</div>
+                <span class="current-student" id="currentStudentLabel">—</span>
+                <div class="form-group" style="margin-top:6px;">
+                    <textarea id="note" placeholder="Nhập nội dung lỗi vi phạm cho học sinh này..."></textarea>
+                </div>
+            </div>
+
+            <div class="progress">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="progress-text" id="progressText">0 / 40</div>
+            </div>
+
+            <button type="submit" class="btn" id="btnSubmit" disabled>XÁC NHẬN GỬI THÔNG TIN</button>
+        </form>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // URL /exec của bạn
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHM0u69wkqjTlc74T1tnfd4asx2kthcx8Lbh_NYJa8fJEQOz3fzKG0ZbtV1QSZukJhTg/exec';
+
+        // ====== DANH SÁCH 40 HỌC SINH ======
+        const STUDENTS = [
+            'TRẦN MAI ANH', 'TRẦN HỒNG CẦM', 'BÙI QUỲNH CHI', 'ĐẶNG PHƯƠNG CHI', 'NGUYỄN THỊ CHI',
+            'TRẦN NGUYỄN CHI', 'NGÔ MẠNH CƯỜNG', 'BÙI HIỀN DỊU', 'NGUYỄN THÙY DUNG', 'TRẦN ĐỨC DUY',
+            'NGUYỄN THÀNH ĐẠT', 'BÙI ĐỨC HIẾU', 'NGUYỄN TRUNG HIẾU', 'BÙI MINH HÒA', 'NGUYỄN THÁI HÒA',
+            'LÊ HUY HOÀNG', 'NGUYỄN NGỌC HÙNG', 'BÙI ĐỨC KHÁNH', 'NGUYỄN HOÀNG NGỌC KHÁNH', 'HOÀNG KHÁNH LONG',
+            'BÙI KHÁNH LY', 'ĐỖ ANH MINH', 'HÀ TRẦN MINH', 'NGUYỄN HOÀNG HẢI NAM', 'TRẦN ĐỨC NAM',
+            'BÙI TRUNG NGHĨA', 'NGUYỄN THỊ BẢO NGỌC', 'BÙI NGỌC NHI', 'BÙI MAI DY NIÊN', 'TRẦN MINH PHƯƠNG',
+            'TRẦN ĐẠI QUANG', 'NGUYỄN THỊ LỆ QUYỀN', 'TRẦN DIỄM QUỲNH', 'BÙI NGUYỄN TUỆ SAM', 'LÊ TIẾN TÀI',
+            'NGUYỄN TRUNG THÀNH', 'TRẦN ĐỨC THẮNG', 'BÙI GIA THỊNH', 'BÙI ĐỨC TIẾN', 'NGÔ XUÂN TÙNG'
+        ];
+
+        const $ = id => document.getElementById(id);
+        const errors = {};
+        STUDENTS.forEach(s => errors[s] = '');
+        let currentStudent = null;
+
+        function showToast(msg, type = 'info', duration = 3500) {
+            const t = $('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type + ' show';
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => t.classList.remove('show'), duration);
+        }
+
+        function removeDiacritics(str) {
+            return str.normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '')
+                      .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        }
+
+        function showSuggestions(keyword) {
+            const box = $('suggestions');
+            const kw = removeDiacritics(keyword.trim().toLowerCase());
+            if (kw === '') { box.classList.remove('show'); box.innerHTML = ''; return; }
+
+            const matches = STUDENTS.filter(s =>
+                removeDiacritics(s.toLowerCase()).includes(kw)
+            );
+
+            if (matches.length === 0) {
+                box.innerHTML = '<div class="no-result">Không tìm thấy học sinh nào.</div>';
+                box.classList.add('show');
+                return;
+            }
+
+            box.innerHTML = matches.map(s => {
+                const hasError = errors[s].trim() !== '';
+                return `<div class="suggestion-item" data-student="${s}">
+                    <span>${s}</span>
+                    <span class="badge ${hasError ? '' : 'hidden'}">đã nhập</span>
+                </div>`;
+            }).join('');
+
+            box.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', () => selectStudent(item.dataset.student));
+            });
+
+            box.classList.add('show');
+        }
+
+        function selectStudent(student) {
+            currentStudent = student;
+            $('studentInput').value = student;
+            $('suggestions').classList.remove('show');
+            $('noteArea').classList.add('show');
+            $('currentStudentLabel').textContent = student;
+            $('note').value = errors[student] || '';
+            setTimeout(() => $('note').focus(), 50);
+        }
+
+        $('studentInput').addEventListener('input', e => {
+            currentStudent = null;
+            $('noteArea').classList.remove('show');
+            showSuggestions(e.target.value);
+        });
+
+        $('studentInput').addEventListener('focus', e => {
+            if (e.target.value.trim() !== '') showSuggestions(e.target.value);
+        });
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.search-wrap')) {
+                $('suggestions').classList.remove('show');
+            }
+        });
+
+        $('note').addEventListener('input', () => {
+            if (!currentStudent) return;
+            errors[currentStudent] = $('note').value;
+            updateProgress();
+        });
+
+        function updateProgress() {
+            const filled = STUDENTS.filter(s => errors[s].trim() !== '').length;
+            const total = STUDENTS.length;
+            $('progressFill').style.width = (filled / total) * 100 + '%';
+            $('progressText').textContent = `${filled} / ${total}`;
+
+            const btn = $('btnSubmit');
+            btn.disabled = filled === 0;
+            btn.textContent = 'XÁC NHẬN GỬI THÔNG TIN';
+        }
+
+        $('violationForm').addEventListener('submit', async e => {
+            e.preventDefault();
+
+            const filled = STUDENTS.filter(s => errors[s].trim() !== '').length;
+            if (filled === 0) {
+                showToast('⚠️ Chưa nhập lỗi cho học sinh nào!', 'error');
+                return;
+            }
+
+            const entries = STUDENTS.map(s => ({
+                student: s,
+                note: errors[s].trim()
+            }));
+
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const sentDate = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+            const btn = $('btnSubmit');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang gửi...';
+            showToast('⏳ Đang gửi lên Google Sheet...', 'info', 10000);
+
+            try {
+                // no-cors: trình duyệt không chặn CORS, Apps Script vẫn nhận POST
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ sentDate, entries })
+                });
+
+                showToast(
+                    `✅ Đã gửi ${filled} học sinh lên Google Sheet!\n${sentDate}\n(Kiểm tra Sheet sau 2–3 giây)`,
+                    'success', 5000
+                );
+
+                setTimeout(() => {
+                    STUDENTS.forEach(s => errors[s] = '');
+                    currentStudent = null;
+                    $('studentInput').value = '';
+                    $('note').value = '';
+                    $('noteArea').classList.remove('show');
+                    $('suggestions').classList.remove('show');
+                    updateProgress();
+                    btn.textContent = 'XÁC NHẬN GỬI THÔNG TIN';
+                }, 1200);
+
+            } catch (err) {
+                console.error(err);
+                showToast(
+                    '❌ Không gửi được.\n' +
+                    'Kiểm tra: (1) URL /exec đúng? (2) Đã deploy bản mới? ' +
+                    '(3) "Ai có quyền truy cập" = Bất kỳ ai?\n' +
+                    'Chi tiết: ' + err.message,
+                    'error', 10000
+                );
+                btn.disabled = false;
+                btn.textContent = 'XÁC NHẬN GỬI THÔNG TIN';
+            }
+        });
+
+        updateProgress();
+    </script>
+</body>
+</html>
